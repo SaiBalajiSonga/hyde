@@ -30,7 +30,7 @@ def _ports(board, color, prod):
     return p2, float(None in ports)
 
 
-def features(game, me):
+def features(game, me, extra=True):
     st = game.state
     board = st.board
     ps = st.player_state
@@ -62,7 +62,7 @@ def features(game, me):
     my_devs = sum(ps[f"{k}_{d}_IN_HAND"] for d in devs)
     opp_devs = sum(ps[f"{o}_{d}_IN_HAND"] for d in devs)
 
-    return [
+    out = [
         ps[f"{k}_VICTORY_POINTS"], ps[f"{o}_VICTORY_POINTS"], float(st.current_color() == me),
         *mine, *theirs,
         sum(1 for x in mine if x), sum(1 for x in theirs if x),
@@ -78,7 +78,11 @@ def features(game, me):
         len(b[SETTLEMENT]), len(ob[SETTLEMENT]), len(b[CITY]), len(ob[CITY]),
         my_p2, op_p2, my_p3, op_p3,
         ps[f"{k}_ACTUAL_VICTORY_POINTS"] - ps[f"{k}_VICTORY_POINTS"],
-        sum(_production(st, me, None)) - sum(mine),          # production lost to the robber
-        sum(_production(st, opp, None)) - sum(theirs),
-        get_longest_road_length(st, me) - get_longest_road_length(st, opp),
     ]
+    if extra:
+        out += [
+            sum(_production(st, me, None)) - sum(mine),          # production lost to the robber
+            sum(_production(st, opp, None)) - sum(theirs),
+            get_longest_road_length(st, me) - get_longest_road_length(st, opp),
+        ]
+    return out

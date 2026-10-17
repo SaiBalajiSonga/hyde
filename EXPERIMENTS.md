@@ -64,6 +64,25 @@ Hybrid α: the learned model's logit is scaled by α and added to F's value. F's
 | 29 | Robber: exact expectation over the stolen card | 1000 | 0.679 | | Neutral |
 | 30 | Discard: keep the hand closest to our builds | 1000 | 0.663 | | Neutral or slightly negative |
 
+### Late afternoon (after the first portal results)
+
+| # | Change | Games | Dev | Holdout | Finding |
+|---|---|---|---|---|---|
+| 31 | Bandit over 3 arms (v2 linear, v3 MLP, MLP opening judge), 5 processes × 200 games | 1000 | 0.671 | | No cost against F (arms equal). Self-labelled wins 61% vs true 67% |
+| 32 | CPU cut: v3 with top_k 2, cap 12 ms, reserve 250 ms | 1000 | 0.652 | | **Negative**: −2.6 pp for only −8% CPU. The cost is not in the lookahead |
+| 33 | MLP retrained on F-vs-F + v3-vs-F + v3-vs-v2 (844k rows), player identity controlled (folded into bias), +3 features (robber exposure ×2, road margin) | 1000 | 0.640 | 0.640 | Not better (see #35) |
+| 34 | MLP with 64 units on 16k F-vs-F games | 1000 | 0.655 | 0.645 | Not better (see #35) |
+| 35 | **Repeat run of the frozen v3 zip** on the same dev boards | 1000 | 0.654 | | Earlier 0.678. **Run-to-run noise is about ±2.5 pp on top of the binomial noise** (wall-clock search cutoffs, laptop throttling), so #33 and #34 are within noise of v3 |
+
+### Scoring machine (public boards, 1000 games each)
+
+| Upload | vs F | vs O | Mean | CPU mean / worst | Over clock | Faults |
+|---|---|---|---|---|---|---|
+| v2 (`tfi_v2_open6.zip`) | 0.649 ± .030 | 0.487 ± .031 | 0.568 | 368 / 1029 ms | 0 | 0 |
+| v3 (`tfi_v3_mlp.zip`) | 0.698 ± .029 | 0.505 ± .031 | 0.602 | 450 / 1501 ms | 1 | 0 |
+
+At 14:37 the leaderboard's #10 had a mean of 0.693 and #1 had 0.726 (0.823 vs F, 0.629 vs O).
+
 ### Ablation of v2 (1000 games, dev boards)
 
 | Variant | Win rate vs F | Δ vs full v2 |

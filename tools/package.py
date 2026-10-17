@@ -33,9 +33,13 @@ def main():
             z.write(a.config, "config.json")
             import json
             cfgj = json.load(open(a.config))
-            for key in ("model", "judge_model", "open_model"):
-                if cfgj.get(key):
-                    z.write(os.path.join(TFI, cfgj[key]), cfgj[key])
+            files = set()
+            for c in [cfgj] + list(cfgj.get("arms") or []):
+                for key in ("model", "judge_model", "open_model"):
+                    if c.get(key):
+                        files.add(c[key])
+            for fn in sorted(files):
+                z.write(os.path.join(TFI, fn), fn)
         elif os.path.exists(os.path.join(TFI, "config.json")):
             z.write(os.path.join(TFI, "config.json"), "config.json")
     names = zipfile.ZipFile(out).namelist()
@@ -52,8 +56,9 @@ def main():
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
         agent = m.Agent()
-        print("loaded OK; cfg:", {k: v for k, v in agent.cfg.items() if k != "weights"})
-        print("weights:", agent.cfg["weights"])
+        print("loaded OK; arms:", len(agent.cores),
+              [(c.cfg.get("model"), c.cfg.get("open_model")) for c in agent.cores])
+        print("cfg:", {k: v for k, v in agent.cfg.items() if k != "weights"})
     finally:
         os.chdir(TFI)
         shutil.rmtree(tmp, ignore_errors=True)

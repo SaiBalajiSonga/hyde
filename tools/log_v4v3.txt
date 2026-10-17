@@ -1,0 +1,5 @@
+A = tools/pool/v4/agent.py
+B = tools/pool/v3/agent.py
+win rate  0.5090 +-0.0310  (509/1000)  no_winner=0
+cpu/game  mean 428.5 ms  worst 1359.4 ms  over_budget=0  errors=0  timeouts=0  crashes=0
+decisions/game 48.5  turns/game 70.4  wall 177s

@@ -16,6 +16,7 @@ def make_learned_fn(path):
         m = json.load(f)
     mean = np.array(m["mean"])
     n = len(mean)                      # a model uses the first n features it was trained on
+    extra = n > 50                     # the 3 appended features cost time; skip them if unused
     inv = 1.0 / np.array(m["scale"])
     if m["kind"] == "linear":
         w = np.array(m["coef"]) * inv
@@ -39,6 +40,6 @@ def make_learned_fn(path):
         w = game.winning_color()
         if w is not None:
             return WIN if w == me else -WIN
-        return score(features(game, me))
+        return score(features(game, me, extra))
 
     return fn
