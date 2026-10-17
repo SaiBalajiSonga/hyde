@@ -58,23 +58,107 @@ CFG = dict(
 )
 
 
-def load_cfg():
+def load_raw_cfg():
     """config.json beside this file, then TFI_CFG (a path, for local experiments only)."""
     cfg = dict(CFG)
     for path in (os.path.join(HERE, "config.json"), os.environ.get("TFI_CFG")):
         if path and os.path.exists(path):
             with open(path) as f:
                 cfg.update(json.load(f))
+    return cfg
+
+
+def finish_cfg(cfg, overrides=None):
+    cfg = dict(cfg)
+    cfg.update(overrides or {})
     w = dict(DEFAULT_WEIGHTS)
-    w.update(cfg["weights"])
+    w.update(cfg.get("weights") or {})
     cfg["weights"] = w
     return cfg
 
 
+def load_cfg():
+    return finish_cfg(load_raw_cfg())
+
+
 class Agent:
+    """Plays each game with one of several strategies ("arms" in config.json) and learns, from the
+    games of this process (all against the same opponent), which one wins most: Thompson sampling
+    over a Beta posterior per arm. With no arms it is a single strategy."""
+
     def __init__(self):
+        raw = load_raw_cfg()
+        arms = raw.pop("arms", None) or [{}]
+        self.cores = [Core(finish_cfg(raw, a)) for a in arms]
+        self.cfg = self.cores[0].cfg
+        self.rng = random.Random(12345)
+        self.wins = [0] * len(self.cores)
+        self.losses = [0] * len(self.cores)
+        self.arm = 0
+        self.last_turn = None
+        self.won = False
+        self.warm_up()
+
+    def warm_up(self):
+        """Run every strategy once on a throwaway game so imports and caches are paid for here,
+        not in the first scored game."""
+        try:
+            import catan_kit.obs as kit_obs  # noqa: F401  (present in the harness)
+            from catanatron.game import Game
+            from catanatron.models.player import Color, RandomPlayer
+            g = Game([RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)], seed=1)
+            for core in self.cores:
+                for _ in range(3):
+                    c = g.copy()
+                    c.execute(c.playable_actions[0], validate_action=False)
+                    core.value(c, Color.RED)
+        except Exception:
+            pass
+
+    def _new_game(self):
+        if self.last_turn is not None:          # close the previous game
+            if self.won:
+                self.wins[self.arm] += 1
+            else:
+                self.losses[self.arm] += 1
+        if len(self.cores) > 1:
+            draws = [self.rng.betavariate(self.wins[k] + 1, self.losses[k] + 1)
+                     for k in range(len(self.cores))]
+            self.arm = max(range(len(self.cores)), key=draws.__getitem__)
+            log = os.environ.get("TFI_BANDIT_LOG")      # local experiments only
+            if log:
+                try:
+                    with open(log, "a") as f:
+                        f.write(f"{os.getpid()} {self.wins} {self.losses} next={self.arm}" + chr(10))
+                except Exception:
+                    pass
+        self.won = False
+
+    def decide(self, obs, playable_actions) -> int:
+        try:
+            if self.last_turn is None or obs.turn < self.last_turn:
+                self._new_game()
+            self.last_turn = obs.turn
+        except Exception:
+            pass
+        i = self.cores[self.arm].decide(obs, playable_actions)
+        if len(self.cores) > 1 and not self.won:
+            try:
+                if obs.my_actual_vps >= 7:
+                    g = obs.sample_world(self.rng)
+                    g.execute(playable_actions[i], validate_action=False)
+                    self.won = g.winning_color() == obs.me
+            except Exception:
+                pass
+        return i
+
+
+class Core:
+    """One strategy: F's value + learned model, same-turn lookahead, opening simulation."""
+
+    def __init__(self, cfg):
         self.rng = random.Random(0)
-        self.cfg = load_cfg()
+        self.cfg = cfg
         self.value = make_value_fn(self.cfg["weights"])
         self.cheap_value = self.value
         if self.cfg.get("model"):

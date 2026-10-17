@@ -15,6 +15,7 @@ def make_learned_fn(path):
     with open(path) as f:
         m = json.load(f)
     mean = np.array(m["mean"])
+    n = len(mean)                      # a model uses the first n features it was trained on
     inv = 1.0 / np.array(m["scale"])
     if m["kind"] == "linear":
         w = np.array(m["coef"]) * inv
@@ -22,7 +23,7 @@ def make_learned_fn(path):
         wl = w.tolist()
 
         def score(x):
-            return b + sum(a * c for a, c in zip(wl, x))
+            return b + sum(a * c for a, c in zip(wl, x))     # zip stops at the model's n
     else:
         W1 = np.array(m["W1"])
         b1 = np.array(m["b1"])
@@ -30,7 +31,7 @@ def make_learned_fn(path):
         b2 = m["b2"]
 
         def score(x):
-            z = (np.asarray(x) - mean) * inv
+            z = (np.asarray(x[:n]) - mean) * inv
             h = np.maximum(z @ W1 + b1, 0.0)
             return float(h @ W2 + b2)
 

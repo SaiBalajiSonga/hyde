@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TFI Catan Agent Report</title>
+<style>
+  @page { size: A4; margin: 16mm 17mm 16mm 17mm; }
+  :root { --ink: #111; --muted: #555; --rule: #bbb; }
+  html, body { background: #fff; color: var(--ink); }
+  body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; line-height: 1.32; margin: 0; }
+  h1 { font-size: 16pt; margin: 0 0 2pt 0; }
+  .sub { color: var(--muted); font-size: 11pt; margin-bottom: 8pt; }
+  h2 { font-size: 12.5pt; margin: 10pt 0 3pt 0; border-bottom: 1px solid var(--rule); padding-bottom: 1pt; }
+  h3 { font-size: 11pt; margin: 6pt 0 2pt 0; }
+  p { margin: 0 0 5pt 0; text-align: justify; }
+  ul { margin: 0 0 5pt 0; padding-left: 15pt; }
+  li { margin: 0 0 2pt 0; }
+  table { border-collapse: collapse; width: 100%; margin: 3pt 0 6pt 0; font-size: 11pt; }
+  th, td { border-bottom: 1px solid #ddd; padding: 1.5pt 4pt; text-align: left; vertical-align: top; }
+  th { border-bottom: 1.5px solid #888; font-weight: 600; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  .cap { font-size: 11pt; color: var(--muted); margin: -2pt 0 6pt 0; }
+  code { font-family: Consolas, monospace; font-size: 10.5pt; }
+  .refs li { font-size: 11pt; }
+</style>
+</head>
+<body>
+
+<h1>A learned-correction value function with turn-level lookahead for 2-player Catan</h1>
+<div class="sub">Team TFI &middot; Catan agent hackathon, IIT Bombay, 17 Oct 2026</div>
+
+<h2>1. Problem and constraints</h2>
+<p>Our agent plays 2-player, 10-VP Catan without player trading on the organisers' catanatron build. It plays against F (catanatron's one-ply <code>ValueFunctionPlayer</code>), O (a trained bot) and other teams. Three facts shaped every design choice.</p>
+<ul>
+<li><b>Compute is tiny.</b> The clock is 300&nbsp;ms plus 12.5&nbsp;ms per decision, capped at 1.5&nbsp;s per game. We measured a <code>copy()</code>+<code>execute()</code> at about 25&nbsp;&micro;s and F's evaluation at 65&nbsp;&micro;s, so a decision can afford roughly 150 positions. MCTS and depth-3 alpha-beta run out of clock in every game (problem statement, Section&nbsp;7).</li>
+<li><b>Hidden information is small.</b> The opponent's resource hand is exactly derivable; only their unplayed development cards are hidden. Because of this we sample one world per decision (perfect-information sampling, Long et al. 2010) and spend compute on other things.</li>
+<li><b>F's evaluation is a tiered linear sum.</b> Public VP is weighted 3&times;10<sup>14</sup>, production 10<sup>8</sup>, reachable production 10<sup>4</sup>, building spots 10<sup>3</sup>, and hand and dev-card terms 1 to 100. This works almost like a lexicographic order: a term only matters between moves that tie on every higher tier.</li>
+</ul>
+
+<h2>2. Method</h2>
+<h3>2.1 Fast exact re-implementation of F's evaluation</h3>
+<p>We rewrote <code>base_fn</code> to compute each feature once (F's version computes production features twice) and only for our own seat. It is bit-for-bit identical to <code>base_fn</code> on 1,740 random positions and 3&times; faster (22 vs 65&nbsp;&micro;s), and that speed buys the search below. With lookahead off, our agent reproduces F's results exactly (193/400 wins on the same seeds as F vs F).</p>
+
+<h3>2.2 Learned win model as a correction term (the main gain)</h3>
+<p>We recorded positions after every action, from both seats, in 16,000 F-vs-F games (1.04M positions), each labelled with the eventual winner. On these we fit a logistic regression over 50 features. For each player the features cover public VP, production per resource, resource variety, road-reachable production, open building spots, hand composition and size, longest-road length, knights played, dev cards held, settlements, cities and ports, plus whose turn it is and our hidden VP cards. The model predicts the eventual winner for 74% of held-out positions (split by game): 62% in turns 0&ndash;20 and 80% from turn 40.</p>
+<p>Used on its own as the evaluation, the model is poor (26% vs F with one-ply). It cannot judge within-turn trade-offs such as spending a hand versus holding it, which F's hand-set terms do encode. We therefore use a <b>hybrid</b>: <i>V</i>(<i>s</i>) = <i>V</i><sub>F</sub>(<i>s</i>) + &alpha;&middot;logit <i>p</i><sub>win</sub>(<i>s</i>) with &alpha; = 10<sup>6</sup>. At that scale the learned term sits between F's production tier and its lower tiers. It never overrides a VP or a large production change, but it decides the many moves F treats as near ties: roads, bank trades, dev-card purchases, robber placement and ending the turn. Larger &alpha; (10<sup>8</sup>) lets the model overrule production and loses to F (47%).</p>
+
+<h3>2.3 Same-turn lookahead</h3>
+<p>F is myopic inside its own turn. A bank trade that enables a settlement looks bad on its own, because the trade alone lowers the hand terms. For the top-4 moves by one-ply value we roll the rest of our turn forward greedily (up to 4 more own moves) and score each move by the best value reached before ending the turn. This cannot be fooled by the opponent, because the rollout stops when the turn passes.</p>
+
+<h3>2.4 Opening simulation</h3>
+<p>For each initial-settlement decision we take the 6 best candidates by one-ply value and simulate the rest of the placement phase. Both seats place greedily by our evaluation from their own side. We keep the candidate whose finished placement scores best. The 300&nbsp;ms starting bank pays for this.</p>
+
+<h3>2.5 Time manager and safety</h3>
+<p>The per-decision budget is min(cap, 0.25&middot;(cpu_left &minus; 200&nbsp;ms)), with a 150&nbsp;ms cap in the opening. Below 200&nbsp;ms the agent drops to one-ply, below 40&nbsp;ms to one-ply with F's cheap evaluation, and below 15&nbsp;ms to a fixed move-type priority with no copying. Every decision is wrapped: on any exception it falls back to one-ply, then to index 0. On the scoring machine v2 used 368&nbsp;ms of CPU per game (1,029&nbsp;ms worst), with 0 games over the clock and 0 faults.</p>
+
+<h3>2.6 In-run opponent adaptation</h3>
+<p>One agent process plays a whole match against a single opponent, and adapting is allowed. The final agent therefore holds several complete strategies (&ldquo;arms&rdquo;) that are equally strong against F but play differently: the linear model, an MLP model, and an MLP opening judge. Before each game it picks an arm by Thompson sampling from a Beta posterior over that arm's wins. It labels its own games: a game counts as won when our chosen move produced the 10th VP. <i>[Result: to fill in from the bandit runs.]</i></p>
+
+<h2>3. Experimental protocol</h2>
+<p>All local numbers come from the kit's own harness (<code>catan_kit.match</code>), run in parallel, with each board played from both seats with the same dice. Tuning used dev boards (seed&nbsp;990000), and every claimed gain was re-checked on separate holdout boards (seed&nbsp;700000). We needed &ge;1,000 games per arm (95% CI &plusmn;3&nbsp;pp) before accepting a change. Weight tuning used its own boards, and model training used separate games. Every run is logged in <code>tools/results.csv</code>, 60+ runs in all.</p>
+
+<h2>4. Results</h2>
+<table>
+<tr><th>Agent (vs F)</th><th class="n">Dev (1000)</th><th class="n">Holdout (1000)</th><th class="n">CPU/game</th></tr>
+<tr><td>F vs F (sanity)</td><td class="n">0.483 (400)</td><td></td><td class="n">223 ms</td></tr>
+<tr><td>F evaluation + same-turn lookahead</td><td class="n">0.517</td><td></td><td class="n">419 ms</td></tr>
+<tr><td>Hybrid, one-ply</td><td class="n">0.573 (400)</td><td></td><td class="n">222 ms</td></tr>
+<tr><td>Hybrid + lookahead (v1)</td><td class="n">0.643 (400)</td><td class="n">0.622</td><td class="n">346 ms</td></tr>
+<tr><td>Hybrid + lookahead, no opening simulation</td><td class="n">0.642</td><td class="n">0.640</td><td class="n">361 ms</td></tr>
+<tr><td><b>v2 = hybrid + lookahead + opening simulation</b></td><td class="n"><b>0.684</b></td><td class="n"><b>0.672</b></td><td class="n">455 ms</td></tr>
+<tr><td>v2 without the learned term (ablation)</td><td class="n">0.517</td><td></td><td class="n">419 ms</td></tr>
+<tr><td>v2 without lookahead (ablation)</td><td class="n">0.600</td><td></td><td class="n">351 ms</td></tr>
+</table>
+<div class="cap">Table 1. Win rate against F (95% CI &plusmn;0.03 at 1,000 games, &plusmn;0.05 at 400). CPU is on a laptop, where F itself uses 186&ndash;223&nbsp;ms against 158&nbsp;ms on the scoring machine. The learned term is worth 16.7&nbsp;pp, lookahead 8.4&nbsp;pp and the opening simulation 4.2&nbsp;pp. The parts interact: lookahead alone adds only 3&nbsp;pp to F, but 7&nbsp;pp to the hybrid.</div>
+
+<p><b>Scoring machine (public boards).</b> v2: 0.649&nbsp;&plusmn;&nbsp;0.030 vs F and 0.487&nbsp;&plusmn;&nbsp;0.031 vs O, 368&nbsp;ms of CPU per game, 0 games over the clock, 0 faults. <i>[v3 / v4: to fill in.]</i> The team machine (Linux, official script) gave 0.700&nbsp;&plusmn;&nbsp;0.064 over 200 games. The 3&ndash;4&nbsp;pp drop from local to public is within the board-set variance we observed between our own dev and holdout sets.</p>
+
+<p><b>How v2 wins.</b> Over 300 games vs F, v2 ends with longest road in 69% of games against 30% for F, and largest army in 28% against 3%. It buys 3.3 dev cards per game against 0.9, while building slightly <i>fewer</i> settlements and cities (4.0 vs 4.5). Longest road decides games: v2 holds it in 92% of its wins but only 31% of its losses. The learned term moved play towards the two 2-VP awards that F's tiered weights almost ignore. We never hand-coded this.</p>
+
+<p><b>Robustness.</b> Other teams will mostly field F-like agents, so we built five F variants with re-tiered weights: build-heavy, dev/army-heavy, road-heavy, city-saving, and catanatron's tuned &ldquo;contender&rdquo;. Against them v2 scores 0.685, 0.705, 0.915, 0.693 and 0.675 (600 games each). Its worst half (contender, F, build) averages 0.681, the same as against F itself. It beats v1 head-to-head 0.546&nbsp;&plusmn;&nbsp;0.031.</p>
+
+<h2>5. What did not work, and why that matters</h2>
+<table>
+<tr><th>Attempt</th><th class="n">vs F</th><th>Lesson</th></tr>
+<tr><td>catanatron AlphaBeta, depth 2 (expectiminimax on F's evaluation), no clock</td><td class="n">0.410</td><td>Deeper search does not fix a weak evaluation</td></tr>
+<tr><td>Wider/deeper lookahead (top 8, depth 7); opening with 10&ndash;16 candidates</td><td class="n">0.63&ndash;0.69</td><td>Search saturates quickly</td></tr>
+<tr><td>Chance moves averaged over 4 samples</td><td class="n">0.658&ndash;0.663</td><td>More CPU, no gain</td></tr>
+<tr><td>Retraining on our own games (DAgger-style)</td><td class="n">0.562</td><td>Feedback loop (below)</td></tr>
+<tr><td>MLP win model (val log-loss 0.472 vs 0.491 linear)</td><td class="n">0.667&ndash;0.678</td><td>Better prediction did not mean better play</td></tr>
+<tr><td>Hand-designed strategy terms: army race, zero-sum VP, road race, blocking, hidden-VP valuation</td><td class="n">0.50&ndash;0.69</td><td>Neutral or harmful</td></tr>
+<tr><td>Dedicated robber (exact steal expectation) and discard logic</td><td class="n">0.663&ndash;0.679</td><td>Neutral</td></tr>
+<tr><td>Opening model trained on 32k end-of-placement positions</td><td class="n">0.644&ndash;0.693</td><td>No gain on holdout</td></tr>
+<tr><td>CEM weight search, 200&ndash;240 games per candidate</td><td class="n">flat</td><td>Inconclusive at &plusmn;7&nbsp;pp noise per candidate</td></tr>
+</table>
+<ul>
+<li><b>The evaluation, not search depth, is the bottleneck under a hard compute cap.</b> Expectiminimax with F's evaluation loses to one-ply F. A small correction term from outcome data gave our biggest gain.</li>
+<li><b>Learned corrections should be scaled into the gaps of a hand-built order, not replace it.</b> With &alpha; too large the model overrules production and play gets worse. With &alpha; at about 10<sup>6</sup> it settles the moves the hand-built order leaves tied.</li>
+<li><b>Training on your own games can teach the model to recognise the player, not the position.</b> In our own games our agent wins 65%, so features that mark its play style (dev-card buying, knights) predict wins. Retraining on those games made the agent worse. Controlling for player identity during training is the principled fix.</li>
+<li><b>Hand-coded strategy hurt once a learned term was present.</b> The model already prices the army and road races; adding them again double-counts.</li>
+<li><b>Noise discipline.</b> Several apparent +2&ndash;3&nbsp;pp gains on 400&ndash;600 games vanished on 1,000 holdout games. We report only changes confirmed on both board sets.</li>
+</ul>
+
+<h2>References and public material used</h2>
+<ul class="refs">
+<li>B. Collazo, <i>catanatron</i> (engine, F, AlphaBeta), github.com/bcollazo/catanatron, GPL-3.0; the organisers' patched build and <code>catan_kit</code>.</li>
+<li>M. Buro, Improving heuristic mini-max search by supervised learning, <i>Artificial Intelligence</i>, 2002.</li>
+<li>G. Tesauro, Temporal difference learning and TD-Gammon, <i>CACM</i>, 1995 (afterstate evaluation).</li>
+<li>S. Ross, G. Gordon, J. Bagnell, A reduction of imitation learning to no-regret online learning (DAgger), AISTATS 2011.</li>
+<li>J. Long, N. Sturtevant, M. Buro, T. Furtak, Understanding the success of perfect information Monte Carlo sampling, AAAI 2010.</li>
+<li>B. Ballard, The *-minimax search procedure for trees containing chance nodes, <i>Artificial Intelligence</i>, 1983.</li>
+<li>W. Thompson, On the likelihood that one unknown probability exceeds another, <i>Biometrika</i>, 1933 (Thompson sampling).</li>
+<li>R. Rubinstein, The cross-entropy method for combinatorial and continuous optimization, 1999.</li>
+<li>Libraries: numpy, scikit-learn (training only). Code written with the help of an LLM coding assistant (Claude), as the rules permit. All numbers come from our own runs.</li>
+</ul>
+</body>
+</html>

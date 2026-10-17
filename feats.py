@@ -17,6 +17,8 @@ NAMES = (
     + ["my_road", "opp_road", "my_lr", "opp_lr", "my_knights", "opp_knights", "my_la", "opp_la"]
     + ["my_devs", "opp_devs", "my_sett", "opp_sett", "my_city", "opp_city"]
     + ["my_port2", "opp_port2", "my_port3", "opp_port3", "my_hidden_vp"]
+    # appended later; models trained on the first 50 features ignore these
+    + ["my_robbed", "opp_robbed", "road_margin"]
 )
 
 
@@ -76,4 +78,7 @@ def features(game, me):
         len(b[SETTLEMENT]), len(ob[SETTLEMENT]), len(b[CITY]), len(ob[CITY]),
         my_p2, op_p2, my_p3, op_p3,
         ps[f"{k}_ACTUAL_VICTORY_POINTS"] - ps[f"{k}_VICTORY_POINTS"],
+        sum(_production(st, me, None)) - sum(mine),          # production lost to the robber
+        sum(_production(st, opp, None)) - sum(theirs),
+        get_longest_road_length(st, me) - get_longest_road_length(st, opp),
     ]

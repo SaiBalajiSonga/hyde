@@ -28,6 +28,9 @@ def main():
     ap.add_argument("--C", type=float, default=1.0)
     ap.add_argument("--not_my_turn", action="store_true",
                     help="train only on positions where the opponent is to move (end-of-turn judge)")
+    ap.add_argument("--identity", action="store_true",
+                    help="last 2 columns are (me is F, opponent is F): train with them, then fold "
+                         "them in as constants (me=our agent, opponent=F-like) so play ignores them")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
@@ -45,6 +48,8 @@ def main():
         keep = X[:, NAMES.index("my_turn")] == 0
         X, y, t, g = X[keep], y[keep], t[keep], g[keep]
     val = (g % 5) == 0
+    names = list(NAMES) + (["me_is_F", "opp_is_F"] if a.identity else [])
+    assert X.shape[1] == len(names), (X.shape, len(names))
     mean = X[~val].mean(axis=0)
     scale = X[~val].std(axis=0) + 1e-6
     Z = (X - mean) / scale
@@ -53,9 +58,10 @@ def main():
     if a.kind == "linear":
         m = LogisticRegression(C=a.C, max_iter=2000)
         m.fit(Z[~val], y[~val])
-        model = dict(kind="linear", names=NAMES, mean=mean.tolist(), scale=scale.tolist(),
-                     coef=m.coef_[0].tolist(), intercept=float(m.intercept_[0]))
-        top = sorted(zip(NAMES, m.coef_[0]), key=lambda z: -abs(z[1]))
+        k = X.shape[1] - (2 if a.identity else 0)
+        model = dict(kind="linear", names=names[:k], mean=mean[:k].tolist(), scale=scale[:k].tolist(),
+                     coef=m.coef_[0][:k].tolist(), intercept=float(m.intercept_[0]))
+        top = sorted(zip(names, m.coef_[0]), key=lambda z: -abs(z[1]))
         print("largest standardized coefficients:")
         for n, c in top[:20]:
             print(f"  {n:16s} {c:+.3f}")
@@ -63,8 +69,14 @@ def main():
         m = MLPClassifier(hidden_layer_sizes=(a.hidden,), alpha=1e-3, max_iter=60,
                           early_stopping=True, random_state=0)
         m.fit(Z[~val], y[~val])
-        model = dict(kind="mlp", names=NAMES, mean=mean.tolist(), scale=scale.tolist(),
-                     W1=m.coefs_[0].tolist(), b1=m.intercepts_[0].tolist(),
+        W1, b1 = m.coefs_[0], m.intercepts_[0].copy()
+        if a.identity:                         # fold me_is_F=0, opp_is_F=1 into the bias
+            for j, val_ in ((-2, 0.0), (-1, 1.0)):
+                b1 += W1[j] * ((val_ - mean[j]) / scale[j])
+            W1 = W1[:-2]
+        k = W1.shape[0]
+        model = dict(kind="mlp", names=names[:k], mean=mean[:k].tolist(), scale=scale[:k].tolist(),
+                     W1=W1.tolist(), b1=b1.tolist(),
                      W2=m.coefs_[1][:, 0].tolist(), b2=float(m.intercepts_[1][0]))
 
     p = m.predict_proba(Z[val])[:, 1]

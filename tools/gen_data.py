@@ -56,13 +56,16 @@ def play(args):
     if seed % 2:
         kinds = kinds[::-1]
     players = [_make_player(kinds[0], Color.RED, eps), _make_player(kinds[1], Color.BLUE, eps)]
+    is_f = {Color.RED: float(kinds[0] == "F"), Color.BLUE: float(kinds[1] == "F")}
     game = Game(players, seed=seed, vps_to_win=10)
     rows = []
     while game.winning_color() is None and game.state.num_turns < 1000:
         game.play_tick()
         if rng.random() < p:
             for c in game.state.colors:
-                rows.append((features(game, c), c, game.state.num_turns))
+                o = Color.BLUE if c == Color.RED else Color.RED
+                # two trailing columns: is this seat / the other seat played by F (identity control)
+                rows.append((features(game, c) + [is_f[c], is_f[o]], c, game.state.num_turns))
     w = game.winning_color()
     if w is None:
         return [], [], []
