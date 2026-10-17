@@ -1,0 +1,44 @@
+{
+ "x": [
+  0.4431933504374297,
+  1.2766758916566994,
+  -0.43340561944729944,
+  1.0363133430901799,
+  -0.3222508699112236,
+  -0.3926132030603222,
+  0.5066184869581278,
+  0.2504381227502679,
+  0.5966702267777796,
+  -1.0293173902094603,
+  1.2466100421623902,
+  1.9613735616633654
+ ],
+ "names": [
+  "production",
+  "enemy_production",
+  "num_tiles",
+  "reachable_production_0",
+  "reachable_production_1",
+  "buildable_nodes",
+  "longest_road",
+  "hand_synergy",
+  "hand_resources",
+  "discard_penalty",
+  "hand_devs",
+  "army_size"
+ ],
+ "weights": {
+  "production": 155767348.20764503,
+  "enemy_production": -358470395.4338588,
+  "num_tiles": 0.6482974764024371,
+  "reachable_production_0": 281.88058648562054,
+  "reachable_production_1": 7245.164081620224,
+  "buildable_nodes": 675.2898971425627,
+  "longest_road": 16.596695013236438,
+  "hand_synergy": 128.4588100688045,
+  "hand_resources": 1.8160616480695646,
+  "discard_penalty": -1.786253701047207,
+  "hand_devs": 34.78530874540639,
+  "army_size": 71.80175980053536
+ }
+}

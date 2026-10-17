@@ -1,0 +1,5 @@
+A = agent.py
+B = C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py
+win rate  0.5150 +-0.0490  (206/400)  no_winner=0
+cpu/game  mean 408.6 ms  worst 1265.6 ms  over_budget=0  errors=0  timeouts=0  crashes=0
+decisions/game 47.6  turns/game 71.8  wall 36s

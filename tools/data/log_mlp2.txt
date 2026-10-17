@@ -1,0 +1,7 @@
+rows 589078  train 471526  val 117552  features 50
+val log-loss 0.4966  acc 0.7425
+  turns   0-20   n= 29004  acc 0.627
+  turns  20-40   n= 30774  acc 0.741
+  turns  40-60   n= 30446  acc 0.795
+  turns  60-1000 n= 27328  acc 0.808
+wrote model_mlp2.json
