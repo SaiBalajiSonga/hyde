@@ -113,3 +113,7 @@ time,tag,a,b,games,seed0,win_rate,ci95,mean_cpu_ms,worst_cpu_ms,over_budget,erro
 15:46:28,rule_nobank4,agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,700000,0.511,0.031,667.0,1500.0,0,0,0,0,0,
 15:47:18,rule_devknight,agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,700000,0.659,0.0294,476.8,1328.1,0,0,0,0,0,
 15:51:07,v6_vs_v5,tools/pool/v6/agent.py,tools/pool/v5_safe/agent.py,1000,650000,0.518,0.031,453.5,1390.6,0,0,0,0,0,
+15:52:14,v6_vsF_660k,tools/pool/v6/agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,660000,0.672,0.0291,469.5,1203.1,0,0,0,0,0,
+16:00:00,h2h_turnfix_1e6_vs_v3,tools/pool/tf_1e6/agent.py,tools/pool/v3/agent.py,1000,640000,0.481,0.031,549.0,1453.1,0,0,0,0,0,
+16:01:12,h2h_turnfix_3e6_vs_v3,tools/pool/tf_3e6/agent.py,tools/pool/v3/agent.py,1000,640000,0.506,0.031,553.4,1500.0,0,0,0,0,0,
+16:02:23,h2h_turnfix_1e7_vs_v3,tools/pool/tf_1e7/agent.py,tools/pool/v3/agent.py,1000,640000,0.497,0.031,547.8,1515.6,1,0,0,0,0,

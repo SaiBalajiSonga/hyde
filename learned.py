@@ -11,7 +11,7 @@ from feats import features
 WIN = 1e6
 
 
-def make_learned_fn(path):
+def make_learned_fn(path, turn=None):
     with open(path) as f:
         m = json.load(f)
     mean = np.array(m["mean"])
@@ -40,6 +40,9 @@ def make_learned_fn(path):
         w = game.winning_color()
         if w is not None:
             return WIN if w == me else -WIN
-        return score(features(game, me, extra))
+        x = features(game, me, extra)
+        if turn is not None:
+            x[2] = turn       # my_turn: score END_TURN and mid-turn positions alike (turn-bias fix)
+        return score(x)
 
     return fn

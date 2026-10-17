@@ -58,6 +58,7 @@ CFG = dict(
     weights={},
     model=None,         # json file beside agent.py: learned evaluation
     model_alpha=None,   # None: learned only. A number: F's value + alpha * learned logit
+    turn_fix=None,      # set my_turn to this constant when scoring with the learned model
     judge_model=None,   # json: judge each candidate turn by this model at the END of the turn
     open_model=None,    # json: judge finished placements with this opening model
     robber_exact=False,  # robber: exact expectation over the card stolen (opponent hand is known)
@@ -180,7 +181,7 @@ class Core:
         self.cheap_value = self.value
         if self.cfg.get("model"):
             from learned import make_learned_fn
-            learned = make_learned_fn(os.path.join(HERE, self.cfg["model"]))
+            learned = make_learned_fn(os.path.join(HERE, self.cfg["model"]), self.cfg.get("turn_fix"))
             alpha = self.cfg.get("model_alpha")
             if alpha is None:
                 self.value = learned
