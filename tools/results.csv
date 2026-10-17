@@ -103,3 +103,7 @@ time,tag,a,b,games,seed0,win_rate,ci95,mean_cpu_ms,worst_cpu_ms,over_budget,erro
 15:24:09,v5win_vs_v3,tools/pool/v5_win/agent.py,tools/pool/v3/agent.py,1000,640000,0.499,0.031,527.9,1453.1,0,0,0,0,0,
 15:28:53,h2h_sp_win50_vs_v3,tools/pool/sp_win50/agent.py,tools/pool/v3/agent.py,1000,640000,0.442,0.0308,556.0,1468.8,0,0,0,0,0,
 15:30:05,h2h_sp_win53_vs_v3,tools/pool/sp_win53/agent.py,tools/pool/v3/agent.py,1000,640000,0.443,0.0308,527.3,1312.5,0,0,0,0,0,
+15:31:14,h2h_sp_margin53_vs_v3,tools/pool/sp_margin53/agent.py,tools/pool/v3/agent.py,1000,640000,0.515,0.031,548.4,1453.1,0,0,0,0,0,
+15:35:27,h2h_ffmargin_vs_v3,tools/pool/ff_margin50/agent.py,tools/pool/v3/agent.py,1000,640000,0.485,0.031,520.6,1453.1,0,0,0,0,0,
+15:36:21,ffmargin_vsF,tools/pool/ff_margin50/agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,700000,0.663,0.0293,526.7,1375.0,0,0,0,0,0,
+15:37:16,spmargin_vsF,tools/pool/sp_margin53/agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,700000,0.668,0.0292,543.2,1375.0,0,0,0,0,0,
