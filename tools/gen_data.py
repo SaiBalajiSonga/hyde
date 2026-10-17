@@ -23,6 +23,9 @@ def _make_player(kind, color, eps):
     from catanatron.players.value import ValueFunctionPlayer
     if kind == "F":
         return ValueFunctionPlayer(color, epsilon=eps)
+    if kind.startswith("AB"):          # catanatron AlphaBeta, e.g. AB2 or AB2p (pruned)
+        from catanatron.players.minimax import AlphaBetaPlayer
+        return AlphaBetaPlayer(color, depth=int(kind[2]), prunning=kind.endswith("p"))
     # Our agent, configured by the json file `kind`, wrapped as a catanatron Player.
     import agent as agent_mod
     from catan_kit.obs import Obs

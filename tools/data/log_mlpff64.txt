@@ -1,0 +1,7 @@
+rows 1042578  train 834396  val 208182  features 50
+val log-loss 0.4738  acc 0.7583
+  turns   0-20   n= 51394  acc 0.650
+  turns  20-40   n= 54960  acc 0.759
+  turns  40-60   n= 54258  acc 0.816
+  turns  60-1000 n= 47570  acc 0.809
+wrote model_mlpff64.json

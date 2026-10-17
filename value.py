@@ -10,6 +10,7 @@ Extra features (all from our seat):
   knight_hand    unplayed knights in our hand (towards largest army)
   enemy_r1       the opponent's production reachable with one more road (blocking)
   enemy_nodes    the opponent's open building spots (blocking)
+  road_race      our longest-road length minus the opponent's, clipped to +-3
 """
 from catanatron.features import (
     count_production,
@@ -30,7 +31,8 @@ PROBA_POINT = 2.778 / 100
 TRANSLATE_VARIETY = 4
 
 EXTRA_DEFAULTS = {"port_2to1": 0.0, "port_3to1": 0.0, "enemy_vps": 0.0, "city_ready": 0.0,
-                  "hidden_vp": 0.0, "knight_hand": 0.0, "enemy_r1": 0.0, "enemy_nodes": 0.0}
+                  "hidden_vp": 0.0, "knight_hand": 0.0, "enemy_r1": 0.0, "enemy_nodes": 0.0,
+                  "road_race": 0.0}
 
 
 def _production(state, color, robber):
@@ -76,8 +78,8 @@ def make_value_fn(w):
     W_DEVS, W_ARMY = w["hand_devs"], w["army_size"]
     W_P2, W_P3, W_EVP, W_CITY = w["port_2to1"], w["port_3to1"], w["enemy_vps"], w["city_ready"]
     W_HVP, W_KH = w["hidden_vp"], w["knight_hand"]
-    W_ER1, W_ENODES = w["enemy_r1"], w["enemy_nodes"]
-    extras = any((W_P2, W_P3, W_EVP, W_CITY, W_HVP, W_KH, W_ER1, W_ENODES))
+    W_ER1, W_ENODES, W_RR = w["enemy_r1"], w["enemy_nodes"], w["road_race"]
+    extras = any((W_P2, W_P3, W_EVP, W_CITY, W_HVP, W_KH, W_ER1, W_ENODES, W_RR))
 
     def fn(game, me):
         state = game.state
@@ -146,6 +148,9 @@ def make_value_fn(w):
             v += ps[key + "_KNIGHT_IN_HAND"] * W_KH
             if W_ER1:
                 v += _reachable(game, opp)[1] * W_ER1
+            if W_RR:
+                d = get_longest_road_length(state, me) - get_longest_road_length(state, opp)
+                v += max(-3, min(3, d)) * W_RR
             if W_ENODES:
                 v += len(board.buildable_node_ids(opp)) * W_ENODES
         return float(v)

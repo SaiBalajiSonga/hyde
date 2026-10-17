@@ -14,7 +14,8 @@ import os
 import random
 import time
 
-from catanatron.models.enums import ActionType
+from catanatron.models.enums import RESOURCES, ActionType
+from catanatron.state_functions import player_key
 from catanatron.players.value import DEFAULT_WEIGHTS
 
 from value import make_value_fn
@@ -24,6 +25,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PRIORITY = {ActionType.BUILD_CITY: 0, ActionType.BUILD_SETTLEMENT: 1, ActionType.ROLL: 2,
             ActionType.BUILD_ROAD: 3, ActionType.PLAY_KNIGHT_CARD: 4,
             ActionType.BUY_DEVELOPMENT_CARD: 5, ActionType.END_TURN: 10}
+# Build costs and how much we want each, for discard decisions.
+BUILDS = [({"WHEAT": 2, "ORE": 3}, 3.0),
+          ({"WOOD": 1, "BRICK": 1, "SHEEP": 1, "WHEAT": 1}, 3.0),
+          ({"SHEEP": 1, "WHEAT": 1, "ORE": 1}, 1.5),
+          ({"WOOD": 1, "BRICK": 1}, 1.0)]
 CHANCE_TYPES = (ActionType.BUY_DEVELOPMENT_CARD, ActionType.MOVE_ROBBER, ActionType.ROLL)
 
 # Search settings. Times are in seconds of the per-game CPU allowance.
@@ -46,6 +52,8 @@ CFG = dict(
     model=None,         # json file beside agent.py: learned evaluation
     model_alpha=None,   # None: learned only. A number: F's value + alpha * learned logit
     judge_model=None,   # json: judge each candidate turn by this model at the END of the turn
+    robber_exact=False,  # robber: exact expectation over the card stolen (opponent hand is known)
+    discard_smart=False, # discard: keep the hand closest to our best builds
 )
 
 
@@ -123,6 +131,11 @@ class Agent:
             return self._one_ply_only(obs, actions, self.cheap_value)
         deadline = t0 + budget
         me = obs.me
+        kind = actions[0].action_type
+        if self.cfg["discard_smart"] and kind == ActionType.DISCARD_RESOURCE:
+            return self._discard(obs, actions)
+        if self.cfg["robber_exact"] and kind == ActionType.MOVE_ROBBER:
+            return self._robber(world, actions, me)
 
         # One ply: the value of the position right after each move. A move with a random outcome
         # (dev-card draw, robber steal, dice) is scored by its mean over chance_n samples.
@@ -203,6 +216,62 @@ class Agent:
             v = self.value(g, me)
             if best_v is None or v > best_v:
                 best_i, best_v = i, v
+        return best_i
+
+    def _robber(self, world, actions, me):
+        """Each robber move scored by its exact expected value: every card the victim could lose,
+        weighted by how many of it they hold (their hand is public information here)."""
+        from catanatron.models.enums import ActionRecord
+        ps = world.state.player_state
+        best_i, best_v = 0, None
+        for i, a in enumerate(actions):
+            victim = a.value[1]
+            outcomes = []
+            if victim is not None:
+                vk = player_key(world.state, victim)
+                hand = {r: ps[f"{vk}_{r}_IN_HAND"] for r in RESOURCES}
+                total = sum(hand.values())
+                outcomes = [(r, n / total) for r, n in hand.items() if n] if total else []
+            try:
+                if not outcomes:
+                    g = world.copy()
+                    g.execute(a, validate_action=False)
+                    v = self.value(g, me)
+                else:
+                    v = 0.0
+                    for r, pr in outcomes:
+                        g = world.copy()
+                        g.execute(a, validate_action=False, action_record=ActionRecord(action=a, result=r))
+                        v += pr * self.value(g, me)
+            except Exception:
+                continue
+            if best_v is None or v > best_v:
+                best_i, best_v = i, v
+        return best_i
+
+    def _discard(self, obs, actions):
+        """Discard the card whose loss leaves the hand closest to our most valuable builds; on ties,
+        the resource we hold most of."""
+        hand = dict(obs.my_resources)
+
+        def score(h):
+            s = 0.0
+            for cost, w in BUILDS:
+                need = sum(cost.values())
+                have = sum(min(h.get(r, 0), n) for r, n in cost.items())
+                s += w * have / need
+            return s
+
+        best_i, best_key = 0, None
+        for i, a in enumerate(actions):
+            r = a.value
+            if r is None or hand.get(r, 0) <= 0:
+                continue
+            h = dict(hand)
+            h[r] -= 1
+            key = (score(h), hand[r])
+            if best_key is None or key > best_key:
+                best_i, best_key = i, key
         return best_i
 
     def _judge_turns(self, actions, children, order, me, deadline):

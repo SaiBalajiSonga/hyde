@@ -29,6 +29,8 @@ def play(args):
     players = [_make_player(order[0], Color.RED, 0), _make_player(order[1], Color.BLUE, 0)]
     label = {Color.RED: "b" if swap else "a", Color.BLUE: "a" if swap else "b"}
     game = Game(players, seed=seed, vps_to_win=10)
+    import time as _t
+    t_start = _t.process_time()
     acts = defaultdict(Counter)
     first_city_turn = {}
     while game.winning_color() is None and game.state.num_turns < 1000:
@@ -39,7 +41,8 @@ def play(args):
             first_city_turn[label[a.color]] = game.state.num_turns
     w = game.winning_color()
     st = game.state
-    out = {"winner": label.get(w), "turns": st.num_turns, "first_city": first_city_turn}
+    out = {"winner": label.get(w), "turns": st.num_turns, "first_city": first_city_turn,
+           "cpu": _t.process_time() - t_start}
     for c in st.colors:
         k = player_key(st, c)
         ps = st.player_state
@@ -66,7 +69,8 @@ def main():
     n = len(res)
     wins = Counter(r["winner"] for r in res)
     print(f"games {n}  A wins {wins['a']}  B wins {wins['b']}  none {wins[None]}  "
-          f"mean turns {sum(r['turns'] for r in res) / n:.1f}")
+          f"mean turns {sum(r['turns'] for r in res) / n:.1f}  "
+          f"cpu/game (both sides + engine) {sum(r['cpu'] for r in res) / n:.2f}s")
     keys = ["vp", "sett", "city", "lr", "la", "vpcards"]
     acts = ["BUILD_SETTLEMENT", "BUILD_CITY", "BUILD_ROAD", "BUY_DEVELOPMENT_CARD",
             "PLAY_KNIGHT_CARD", "MARITIME_TRADE", "PLAY_MONOPOLY", "PLAY_YEAR_OF_PLENTY",

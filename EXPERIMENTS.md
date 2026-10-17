@@ -40,6 +40,49 @@ The raw rows are in `tools/results.csv`. All runs were on a 24-core laptop. F me
 
 Hybrid α: the learned model's logit is scaled by α and added to F's value. F's own scale is 3e14 per VP and 1e8 per unit of production.
 
+## Afternoon: trying to improve on v2 (all against F, v2 settings unless stated)
+
+| # | Change on top of v2 | Games | Dev | Holdout | Finding |
+|---|---|---|---|---|---|
+| 12 | Opening simulation with 3 / 10 / 16 candidates (v2 uses 6) | 1000 | 0.663 / 0.690 / 0.678 | | Plateau from 6 up |
+| 13 | α = 3e5 / 3e6 / 1e7 (v2 uses 1e6) | 1000 | 0.682 / 0.686 / 0.694 | | Insensitive once lookahead is on |
+| 14 | Chance moves averaged over 4 samples (expectimax at depth 1) | 1000 | 0.663 | 0.658 | **Negative**: no gain, +100 ms per game |
+| 15 | Opening also simulates initial roads | 1000 | 0.675 | 0.691 | Within noise of v2 (0.675 / 0.671 in the same session) |
+| 16 | F's lower weights × up to 1e6 (dev cards in hand, army, synergy), one-ply | 400 | 0.20 to 0.48 | | **Negative**: dev-card weight makes it hoard, the rest changes nothing |
+| 17 | Own hidden VP cards counted as VPs + expected-value dev buys | 600 | 0.672 | | Same as v2 |
+| 18 | + value on knights in hand | 600 | 0.50 to 0.53 | | **Negative**, and 21 to 23 games over the clock |
+| 19 | Wide CEM over 17 weights (σ = 2, ×7 per step), hybrid one-ply | 12 × 240 | pop. mean 0.562, best 0.588 | | Locally flat landscape. Run stopped (out of memory) |
+| 20 | "Judge" mode: plan the turn with the hybrid, score the end-of-turn position with a model trained on opponent-to-move positions | 400 | 0.625 (top 4) / 0.673 (top 6) | | No gain |
+| 21 | Opening simulation models the opponent with F's evaluation | 1000 | | 0.639 | **Negative** (v2: 0.672) |
+| 22 | Expansion in the production tier: own reach ×1e3 / opponent reach −1e7 / opponent spots −1e6 | 600 | 0.518 / 0.652 / 0.685 | | Own-reach upweighting is strongly negative; blocking terms neutral |
+| 23 | MLP (32 units) on 16k F-vs-F games: val log-loss 0.472 vs 0.491 for the linear model | 1000 | 0.678 | 0.667 | **Better prediction did not mean better play** |
+
+### Ablation of v2 (1000 games, dev boards)
+
+| Variant | Win rate vs F | Δ vs full v2 |
+|---|---|---|
+| Full v2 | 0.684 | |
+| Without opening simulation | 0.642 | −4.2 pp |
+| Without same-turn lookahead | 0.600 | −8.4 pp |
+| Without learned model (F eval + lookahead + opening) | 0.517 | −16.7 pp |
+
+### How v2 wins (300 in-process games vs F, end-of-game averages)
+
+| | v2 | F |
+|---|---|---|
+| Holds longest road | 0.69 | 0.30 |
+| Holds largest army | 0.28 | 0.03 |
+| Dev cards bought | 3.3 | 0.9 |
+| Knights played | 1.8 | 0.5 |
+| VP cards | 0.71 | 0.17 |
+| Settlements + cities | 4.0 | 4.5 |
+
+F almost never contests largest army, and loses longest road most of the time. v2 builds slightly *fewer* buildings than F and wins on the 4 VP from longest road and largest army.
+
+### Team machine check (Linux, official `catan_kit.evaluate`, 200 games)
+
+v2: 0.700 ± 0.064 vs F. CPU 382 ms mean, 710 ms worst. 0 over the clock, 0 errors over 9,950 decisions. Load time 0.18 s.
+
 ## Head-to-head and robustness (row A wins)
 
 | A | B | Games | Win rate |
