@@ -1,0 +1,6 @@
+64082 rows from 1000 games in 31s -> tools/data/div_v3_Fbuild.npz
+68392 rows from 1000 games in 36s -> tools/data/div_v3_Fdev.npz
+70670 rows from 1000 games in 37s -> tools/data/div_v3_Froad.npz
+64396 rows from 1000 games in 33s -> tools/data/div_v3_Fcity.npz
+64524 rows from 1000 games in 32s -> tools/data/div_v3_Fcont.npz
+65452 rows from 1000 games in 34s -> tools/data/div_v6_F.npz

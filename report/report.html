@@ -4,22 +4,22 @@
 <meta charset="utf-8">
 <title>TFI Catan Agent Report</title>
 <style>
-  @page { size: A4; margin: 16mm 17mm 16mm 17mm; }
+  @page { size: A4; margin: 11mm 13mm 11mm 13mm; }
   :root { --ink: #111; --muted: #555; --rule: #bbb; }
   html, body { background: #fff; color: var(--ink); }
-  body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; line-height: 1.32; margin: 0; }
+  body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; line-height: 1.22; margin: 0; }
   h1 { font-size: 16pt; margin: 0 0 2pt 0; }
   .sub { color: var(--muted); font-size: 11pt; margin-bottom: 8pt; }
-  h2 { font-size: 12.5pt; margin: 10pt 0 3pt 0; border-bottom: 1px solid var(--rule); padding-bottom: 1pt; }
-  h3 { font-size: 11pt; margin: 6pt 0 2pt 0; }
-  p { margin: 0 0 5pt 0; text-align: justify; }
+  h2 { font-size: 12pt; margin: 6pt 0 2pt 0; border-bottom: 1px solid var(--rule); padding-bottom: 1pt; }
+  h3 { font-size: 11pt; margin: 4pt 0 1pt 0; }
+  p { margin: 0 0 3pt 0; text-align: justify; }
   ul { margin: 0 0 5pt 0; padding-left: 15pt; }
   li { margin: 0 0 2pt 0; }
-  table { border-collapse: collapse; width: 100%; margin: 3pt 0 6pt 0; font-size: 11pt; }
-  th, td { border-bottom: 1px solid #ddd; padding: 1.5pt 4pt; text-align: left; vertical-align: top; }
+  table { border-collapse: collapse; width: 100%; margin: 2pt 0 3pt 0; font-size: 11pt; }
+  th, td { border-bottom: 1px solid #ddd; padding: 0.5pt 3pt; text-align: left; vertical-align: top; }
   th { border-bottom: 1.5px solid #888; font-weight: 600; }
   td.n, th.n { text-align: right; white-space: nowrap; }
-  .cap { font-size: 11pt; color: var(--muted); margin: -2pt 0 6pt 0; }
+  .cap { font-size: 11pt; color: var(--muted); margin: 0 0 4pt 0; }
   code { font-family: Consolas, monospace; font-size: 10.5pt; }
   .refs li { font-size: 11pt; }
 </style>
@@ -55,7 +55,7 @@
 <p>The per-decision budget is min(cap, 0.25&middot;(cpu_left &minus; 200&nbsp;ms)), with a 150&nbsp;ms cap in the opening. Below 200&nbsp;ms the agent drops to one-ply with F's cheap evaluation (from v5; v2&ndash;v3 used the hybrid here), and below 15&nbsp;ms to a fixed move-type priority with no copying. Every decision is wrapped: on any exception it falls back to one-ply, then to index 0. No submission has had a fault. The only over-clock game (v3, 1 in 1,000) came from a very long game, and v5's cheaper reserve mode removed it.</p>
 
 <h3>2.6 In-run opponent adaptation (built, then dropped)</h3>
-<p>One agent process plays a whole match against a single opponent, and adapting is allowed. v4 therefore held several complete strategies (&ldquo;arms&rdquo;): the linear model, the MLP and a 64-unit MLP. Before each game it picks an arm by Thompson sampling from a Beta posterior over that arm's wins. It labels its own games: a game counts as won when our chosen move produced the 10th VP. Against F, where all arms are about equally strong, five processes of 200 games each scored 0.671 (v2: 0.684), so exploration costs nothing measurable. The self-labelling counts 61% wins against the true 67%, because it misses wins completed by forced moves. That bias is not guaranteed to be equal across arms, since arms may win in different ways. The tournament below shows v4 tied with v3 (0.500) and no better against any opponent, because arms that differ only in the predictor on top play too alike to be worth adapting between. We dropped the bandit for v5.</p>
+<p>v4 held three strategies (linear, MLP-32, MLP-64 predictors) and picked one per game by Thompson sampling on self-labelled wins, since one process plays a whole match against one opponent. It tied v3 (0.500) and was no better against any opponent: arms that differ only in the predictor play too alike to adapt between. We dropped it.</p>
 
 <h2>3. Experimental protocol</h2>
 <p>All local numbers come from the kit's own harness (<code>catan_kit.match</code>), run in parallel, with each board played from both seats with the same dice. Tuning used dev boards (seed&nbsp;990000), and every claimed gain was re-checked on separate holdout boards (seed&nbsp;700000). We required &ge;1,000 games per arm (binomial 95% CI &plusmn;3&nbsp;pp). Our search stops on wall-clock deadlines and the laptop's speed varies, so repeat runs of the <i>same</i> agent on the <i>same</i> boards differ by up to 2.5&nbsp;pp (0.678 vs 0.654 for v3). The combined resolution is therefore about &plusmn;4&nbsp;pp: we treat smaller differences as ties unless they replicate on both board sets. Weight tuning used its own boards, and model training used separate games. Every run is logged in <code>tools/results.csv</code>, 60+ runs in all.</p>
@@ -82,7 +82,7 @@
 <tr><td>v5 (= v3 + cheap reserve mode)</td><td class="n">0.680</td><td class="n">0.480</td><td class="n">0.580</td><td class="n">456 / 1412 ms</td><td class="n">0</td></tr>
 </table>
 <div class="cap">Table 2. 1,000 games per cell, 95% CI &plusmn;0.03. Locally, v2 and v3 were equal against F (0.684/0.672 vs 0.678/0.667). On the public boards v3 is 5&nbsp;pp better against F, which at our &plusmn;4&nbsp;pp resolution is most likely board luck, not a real gain. Both are roughly even with O. v3 and v5 differ only at the very end of long games, yet the portal puts them 1.8&nbsp;pp apart against F and 2.5&nbsp;pp apart against O: that is the portal's own noise. One upload is a single &plusmn;3&nbsp;pp sample, and the local-to-public differences (&minus;3.5&nbsp;pp for v2, +2&nbsp;pp for v3) are the same size as the differences between our own dev and holdout boards. The team machine (Linux, official script) gave v2 0.700&nbsp;&plusmn;&nbsp;0.064 over 200 games.</div>
-<p><b>Where the CPU goes.</b> Cutting lookahead from the top 4 moves to the top 2 saved only 8% of CPU (450&rarr;414&nbsp;ms) and lost 2.6&nbsp;pp, so the lookahead is not the cost. The cost is the one-ply pass over every legal move with the MLP hybrid (~100&nbsp;&micro;s per move) and, in the worst case, very long games. Past 96 decisions the clock stops growing, yet each decision still costs about 1&nbsp;ms to receive the game state. v3's single over-clock game came from this. The fix is to fall back to F's cheap evaluation once the reserve is reached.</p>
+<p><b>Where the CPU goes.</b> Cutting lookahead from 4 to 2 moves saved only 8% of CPU and lost 2.6&nbsp;pp. The cost is the one-ply pass with the MLP (~100&nbsp;&micro;s per move) and, at worst, very long games: past 96 decisions the clock stops growing but each decision still costs ~1&nbsp;ms. v5&rsquo;s cheap reserve mode removed v3&rsquo;s over-clock game.</p>
 
 <p><b>How v2 wins.</b> Over 300 games vs F, v2 ends with longest road in 69% of games against 30% for F, and largest army in 28% against 3%. It buys 3.3 dev cards per game against 0.9, while building slightly <i>fewer</i> settlements and cities (4.0 vs 4.5). Longest road decides games: v2 holds it in 92% of its wins but only 31% of its losses. The learned term moved play towards the two 2-VP awards that F's tiered weights almost ignore. We never hand-coded this.</p>
 
@@ -105,6 +105,11 @@
 <tr><td>Same self-play data, final VP-margin target instead of win/loss</td><td class="n">0.515&dagger; / 0.668</td><td>Margin labels +7&nbsp;pp over win labels on identical data, but only a tie with v3</td></tr>
 <tr><td>F-vs-F data, VP-margin target</td><td class="n">0.485&dagger; / 0.663</td><td>Tie</td></tr>
 <tr><td>In-run bandit over 3 predictors (v4); exhaustive winning-line search at &ge;7 actual VP</td><td class="n">0.500&dagger; / 0.499&dagger;</td><td>Tie</td></tr>
+<tr><td>Turn-bias fix (score <code>my_turn</code> as a constant; flips 8.2% of end-turn choices vs 0.1% noise), at &alpha; = 10<sup>6</sup> / 3&middot;10<sup>6</sup> / 10<sup>7</sup></td><td class="n">0.481&dagger; / 0.506&dagger; / 0.497&dagger;</td><td>A real bias, but fixing it is not detectable in win rate</td></tr>
+<tr><td>Public-VP weight lowered from 3&middot;10<sup>14</sup> to 10<sup>8</sup>&ndash;10<sup>10</sup></td><td class="n">0.66&ndash;0.71 / 0.515&dagger;</td><td>Tie</td></tr>
+<tr><td>Same MLP trained on 2.4&times; the F-vs-F data (38k games)</td><td class="n">0.510&dagger;</td><td>Log-loss unchanged (0.472): data-saturated</td></tr>
+<tr><td>Rule: buy a dev card whenever no city or settlement is possible (&ldquo;dev rush&rdquo;)</td><td class="n">0.518 vs v5 / 0.672</td><td>Tie, with a very different style (below)</td></tr>
+<tr><td>Rule: never make 4:1 bank trades</td><td class="n"><b>0.511</b></td><td><b>&minus;15&nbsp;pp</b>: bank trading is central without player trades</td></tr>
 <tr><td>MLP win model (val log-loss 0.472 vs 0.491 linear)</td><td class="n">0.667&ndash;0.678</td><td>Better prediction did not mean better play</td></tr>
 <tr><td>Hand-designed strategy terms: army race, zero-sum VP, road race, blocking, hidden-VP valuation</td><td class="n">0.50&ndash;0.69</td><td>Neutral or harmful</td></tr>
 <tr><td>Dedicated robber (exact steal expectation) and discard logic</td><td class="n">0.663&ndash;0.679</td><td>Neutral</td></tr>
@@ -117,11 +122,13 @@
 <li><b>The model steers play, but better prediction did not mean better choices.</b> We checked whether the learned term actually changes moves. Over 5,721 decisions in 120 games, our final move differs from F's in 47% of decisions (one-ply hybrid alone: 45%): roads 70%, bank trades 64%, discards 55%, ending the turn 46%, opening 32%, settlements 22%, robber 19%, cities 12%. The plateau is not because the term cannot act. Improving win <i>prediction</i> (log-loss 0.491&rarr;0.472) did not improve the <i>ranking of sibling moves</i>, which is what play needs. A model trained on outcomes ranks positions across games, not moves within a position.</li>
 <li><b>Learned corrections should be scaled into the gaps of a hand-built order, not replace it.</b> With &alpha; too large the model overrules production and play gets worse. With &alpha; at about 10<sup>6</sup> it settles the moves the hand-built order leaves tied.</li>
 <li><b>Labels matter more than data volume or features.</b> Win/loss labels from our own games hurt every time (mixed, identity-controlled, pure self-play: 0.44&ndash;0.56). In self-play the winner is decided by small edges, so a game outcome says little about any one position. On the same self-play data, regressing the final VP margin instead of the winner recovered 7&nbsp;pp head-to-head. But no label, data source or architecture beat the original F-vs-F MLP by more than our &plusmn;4&nbsp;pp resolution.</li>
+<li><b>Different strategies, same strength.</b> The dev-rush variant takes largest army in 62% of games (v2: 28%, F: 2%), buys 5.7 dev cards and holds 1.15 VP cards, but builds half as many cities (0.9 vs 1.9). It ties v5 head to head. Against F, many routes to 10 VP are about equally good, which is why style-level changes kept landing inside our noise band.</li>
 <li><b>Hand-coded strategy hurt once a learned term was present.</b> The model already prices the army and road races; adding them again double-counts.</li>
-<li><b>Noise discipline.</b> Several apparent +2&ndash;3&nbsp;pp gains on 400&ndash;600 games vanished on 1,000 holdout games. We report only changes confirmed on both board sets.</li>
+<li><b>Noise discipline.</b> Several apparent +2&ndash;3&nbsp;pp gains on 400&ndash;600 games vanished on 1,000 holdout games. Changes inside &plusmn;4&nbsp;pp are &ldquo;not detectable at our resolution&rdquo;, not &ldquo;no effect&rdquo;.</li>
+<li><b>Where we stand.</b> At 16:11 the public top 10 scored 0.80&ndash;0.84 vs F and 0.65&ndash;0.73 vs O; our best upload scored 0.694 / 0.538. Our approach (F's evaluation plus a learned correction, shallow search) plateaued about 10&nbsp;pp below them. Every attempt to break the plateau (better predictors, more data, on-policy data, label changes, larger &alpha;, strategy rules, deeper search) landed within noise. We take this as evidence that the limit is the hybrid structure itself: a correction learned from outcomes ranks positions across games, while play needs sibling moves ranked within one position.</li>
 </ul>
 
-<h2>References and public material used</h2>
+<h2 style="page-break-before: always">References and public material used</h2>
 <ul class="refs">
 <li>B. Collazo, <i>catanatron</i> (engine, F, AlphaBeta), github.com/bcollazo/catanatron, GPL-3.0; the organisers' patched build and <code>catan_kit</code>.</li>
 <li>M. Buro, Improving heuristic mini-max search by supervised learning, <i>Artificial Intelligence</i>, 2002.</li>

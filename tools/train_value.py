@@ -41,7 +41,8 @@ def main():
     goff = 0
     for path in a.data:
         d = np.load(path)
-        Xs.append(d["X"].astype(np.float64))
+        Xi = d["X"].astype(np.float64)
+        Xs.append(Xi[:, :a.nfeat] if a.nfeat else Xi)
         ys.append(d["y"])
         ts.append(d["t"])
         gs.append(d["g"] + goff)
