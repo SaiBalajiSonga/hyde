@@ -6,7 +6,7 @@ import json
 
 import numpy as np
 
-from feats import features
+from feats import BASE_NAMES, NAMES, features
 
 WIN = 1e6
 
@@ -14,6 +14,10 @@ WIN = 1e6
 def make_learned_fn(path):
     with open(path) as f:
         m = json.load(f)
+    names = m.get("names", NAMES[:len(m["mean"])])
+    indices = [NAMES.index(name) for name in names]
+    include_extras = any(i >= len(BASE_NAMES) for i in indices)
+    identity = indices == list(range(len(indices)))
     mean = np.array(m["mean"])
     inv = 1.0 / np.array(m["scale"])
     if m["kind"] == "linear":
@@ -38,6 +42,9 @@ def make_learned_fn(path):
         w = game.winning_color()
         if w is not None:
             return WIN if w == me else -WIN
-        return score(features(game, me))
+        x = features(game, me, include_extras=include_extras)
+        if not identity or len(x) != len(indices):
+            x = [x[i] for i in indices]
+        return score(x)
 
     return fn

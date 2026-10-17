@@ -1,1 +1,6 @@
-{"top_k":4,"model":"model_lin.json","model_alpha":1e6,"open_m":6}
+{
+  "top_k": 4,
+  "model": "model_mixed_extra.json",
+  "model_alpha": 1000000.0,
+  "open_m": 6
+}

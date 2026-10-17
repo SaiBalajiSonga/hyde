@@ -20,6 +20,9 @@ NAMES = (
 )
 
 
+BASE_NAMES = list(NAMES)
+NAMES = BASE_NAMES + ["my_robber_loss", "opp_robber_loss", "road_margin"]
+
 def _ports(board, color, prod):
     ports = board.get_player_port_resources(color)
     if not ports:
@@ -28,7 +31,7 @@ def _ports(board, color, prod):
     return p2, float(None in ports)
 
 
-def features(game, me):
+def features(game, me, include_extras=True):
     st = game.state
     board = st.board
     ps = st.player_state
@@ -60,7 +63,7 @@ def features(game, me):
     my_devs = sum(ps[f"{k}_{d}_IN_HAND"] for d in devs)
     opp_devs = sum(ps[f"{o}_{d}_IN_HAND"] for d in devs)
 
-    return [
+    values = [
         ps[f"{k}_VICTORY_POINTS"], ps[f"{o}_VICTORY_POINTS"], float(st.current_color() == me),
         *mine, *theirs,
         sum(1 for x in mine if x), sum(1 for x in theirs if x),
@@ -77,3 +80,11 @@ def features(game, me):
         my_p2, op_p2, my_p3, op_p3,
         ps[f"{k}_ACTUAL_VICTORY_POINTS"] - ps[f"{k}_VICTORY_POINTS"],
     ]
+
+    if include_extras:
+        values.extend([
+            max(0.0, sum(_production(st, me, None)) - sum(mine)),
+            max(0.0, sum(_production(st, opp, None)) - sum(theirs)),
+            values[BASE_NAMES.index("my_road")] - values[BASE_NAMES.index("opp_road")],
+        ])
+    return values
