@@ -52,6 +52,7 @@ CFG = dict(
     model=None,         # json file beside agent.py: learned evaluation
     model_alpha=None,   # None: learned only. A number: F's value + alpha * learned logit
     judge_model=None,   # json: judge each candidate turn by this model at the END of the turn
+    open_model=None,    # json: judge finished placements with this opening model
     robber_exact=False,  # robber: exact expectation over the card stolen (opponent hand is known)
     discard_smart=False, # discard: keep the hand closest to our best builds
 )
@@ -90,6 +91,10 @@ class Agent:
                 self.value = hybrid
         self.end_turn = ActionType.END_TURN
         self.judge = None
+        self.open_value = self.value
+        if self.cfg.get("open_model"):
+            from learned import make_learned_fn
+            self.open_value = make_learned_fn(os.path.join(HERE, self.cfg["open_model"]))
         if self.cfg.get("judge_model"):
             from learned import make_learned_fn
             self.judge = make_learned_fn(os.path.join(HERE, self.cfg["judge_model"]))
@@ -213,7 +218,7 @@ class Agent:
                 if nxt is None:
                     break
                 g = nxt
-            v = self.value(g, me)
+            v = self.open_value(g, me) if not g.state.is_initial_build_phase else self.value(g, me)
             if best_v is None or v > best_v:
                 best_i, best_v = i, v
         return best_i

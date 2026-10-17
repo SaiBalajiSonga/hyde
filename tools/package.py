@@ -33,7 +33,7 @@ def main():
             z.write(a.config, "config.json")
             import json
             cfgj = json.load(open(a.config))
-            for key in ("model", "judge_model"):
+            for key in ("model", "judge_model", "open_model"):
                 if cfgj.get(key):
                     z.write(os.path.join(TFI, cfgj[key]), cfgj[key])
         elif os.path.exists(os.path.join(TFI, "config.json")):
