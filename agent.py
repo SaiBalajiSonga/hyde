@@ -41,7 +41,8 @@ CFG = dict(
     spend_fraction=0.25,  # of the clock above the reserve
     reserve=0.200,      # clock kept back for the rest of the game; below it, one-ply only
     panic=0.040,        # below this, one-ply with the cheap hand-written value only
-    last_resort=0.015,  # below this, a fixed priority by move type: no copies, no evaluation
+    last_resort=0.015,
+    cheap_in_reserve=False,  # in the reserve, one-ply with F's cheap value instead of the hybrid  # below this, a fixed priority by move type: no copies, no evaluation
     chance_n=1,         # samples for moves with a random outcome (4 measured no better)
     open_roads=False,   # also simulate the placement phase for initial road choices
     open_opp="self",    # placement simulation: opponent picks by "self" (our eval) or "F" (F's eval)
@@ -216,7 +217,8 @@ class Core:
         if left < self.cfg["last_resort"]:
             return min(range(len(actions)),
                        key=lambda i: PRIORITY.get(actions[i].action_type, 50))
-        if left < self.cfg["panic"]:
+        if left < self.cfg["panic"] or (budget <= 0 and self.cfg["cheap_in_reserve"]):
+            # In the reserve (long games past the clock's ceiling): F-cost play only.
             return self._one_ply_only(obs, actions, self.cheap_value)
         deadline = t0 + budget
         me = obs.me
