@@ -102,3 +102,4 @@ time,tag,a,b,games,seed0,win_rate,ci95,mean_cpu_ms,worst_cpu_ms,over_budget,erro
 14:56:08,v4_vs_v3_w6,tools/pool/v4/agent.py,tools/pool/v3/agent.py,1000,990000,0.509,0.031,428.5,1359.4,0,0,0,0,0,
 15:24:09,v5win_vs_v3,tools/pool/v5_win/agent.py,tools/pool/v3/agent.py,1000,640000,0.499,0.031,527.9,1453.1,0,0,0,0,0,
 15:28:53,h2h_sp_win50_vs_v3,tools/pool/sp_win50/agent.py,tools/pool/v3/agent.py,1000,640000,0.442,0.0308,556.0,1468.8,0,0,0,0,0,
+15:30:05,h2h_sp_win53_vs_v3,tools/pool/sp_win53/agent.py,tools/pool/v3/agent.py,1000,640000,0.443,0.0308,527.3,1312.5,0,0,0,0,0,
