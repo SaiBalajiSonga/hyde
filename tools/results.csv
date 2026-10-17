@@ -84,3 +84,4 @@ time,tag,a,b,games,seed0,win_rate,ci95,mean_cpu_ms,worst_cpu_ms,over_budget,erro
 14:21:06,s_openlin,agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,700000,0.644,0.0297,462.6,1281.2,0,0,0,0,0,
 14:21:56,s_openmlp,agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,990000,0.677,0.029,461.6,1171.9,0,0,0,0,0,
 14:22:47,s_openmlp,agent.py,C:/Users/SAI BALAJI/OneDrive/Desktop/catan-hackathon-agent/examples/f_agent.py,1000,700000,0.68,0.0289,469.0,1046.9,0,0,0,0,0,
+14:23:26,pool_v2_F_build,tools/pool/v2/agent.py,tools/pool/F_build/agent.py,600,990000,0.685,0.0372,473.4,1000.0,0,0,0,0,0,
