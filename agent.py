@@ -43,6 +43,9 @@ CFG = dict(
     panic=0.040,        # below this, one-ply with the cheap hand-written value only
     last_resort=0.015,
     cheap_in_reserve=False,
+    dev_rush=False,     # rule: buy a dev card whenever no city/settlement can be built
+    knight_first=False, # rule: always play an available knight
+    no_bank4=False,     # rule: never make 4:1 bank trades
     win_search=False,   # at >=7 actual VP: exhaustive search of our own moves this turn for a win
     win_depth=4,
     win_nodes=800,  # in the reserve, one-ply with F's cheap value instead of the hybrid  # below this, a fixed priority by move type: no copies, no evaluation
@@ -235,6 +238,25 @@ class Core:
             return self._one_ply_only(obs, actions, self.cheap_value)
         deadline = t0 + budget
         me = obs.me
+        kind = actions[0].action_type
+        if not placing:
+            types = [a.action_type for a in actions]
+            if self.cfg["knight_first"] and ActionType.PLAY_KNIGHT_CARD in types:
+                return types.index(ActionType.PLAY_KNIGHT_CARD)
+            if (self.cfg["dev_rush"] and ActionType.BUY_DEVELOPMENT_CARD in types
+                    and ActionType.BUILD_CITY not in types
+                    and ActionType.BUILD_SETTLEMENT not in types):
+                return types.index(ActionType.BUY_DEVELOPMENT_CARD)
+            if self.cfg["no_bank4"]:
+                keep = [i for i, a in enumerate(actions)
+                        if not (a.action_type == ActionType.MARITIME_TRADE and a.value[3] is not None)]
+                if 0 < len(keep) < len(actions):
+                    sub = [actions[i] for i in keep]
+                    j = self._decide_core(obs, sub, world, placing, budget, left, deadline, me)
+                    return keep[j]
+        return self._decide_core(obs, actions, world, placing, budget, left, deadline, me)
+
+    def _decide_core(self, obs, actions, world, placing, budget, left, deadline, me):
         kind = actions[0].action_type
         if (self.cfg["win_search"] and not placing and obs.my_actual_vps >= 7
                 and world.state.current_color() == me):

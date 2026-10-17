@@ -1,0 +1,13 @@
+games 300  A wins 197  B wins 103  none 0  mean turns 71.0  cpu/game (both sides + engine) 0.65s
+A all  n=300  vp=8.66  sett=3.11  city=0.93  lr=0.65  la=0.62  vpcards=1.15  first_city_turn=43
+           SETTLE=4.0  CITY=0.9  ROAD=8.7  CARD=5.7  CARD=3.1  TRADE=4.6  MONOPO=0.4  PLENTY=0.4  BUILDI=0.4  TURN=34.4
+A won  n=197  vp=10.10  sett=3.31  city=1.17  lr=0.84  la=0.76  vpcards=1.24  first_city_turn=41
+           SETTLE=4.5  CITY=1.2  ROAD=9.1  CARD=6.2  CARD=3.5  TRADE=5.0  MONOPO=0.4  PLENTY=0.5  BUILDI=0.5  TURN=34.1
+A lost n=103  vp=5.90  sett=2.73  city=0.47  lr=0.29  la=0.35  vpcards=0.96  first_city_turn=50
+           SETTLE=3.2  CITY=0.5  ROAD=7.9  CARD=4.7  CARD=2.5  TRADE=3.8  MONOPO=0.4  PLENTY=0.3  BUILDI=0.3  TURN=35.0
+B all  n=300  vp=7.02  sett=2.64  city=1.76  lr=0.33  la=0.02  vpcards=0.16  first_city_turn=35
+           SETTLE=4.4  CITY=1.8  ROAD=8.6  CARD=0.8  CARD=0.4  TRADE=5.0  MONOPO=0.1  PLENTY=0.1  BUILDI=0.0  TURN=34.6
+B won  n=103  vp=10.04  sett=2.73  city=2.83  lr=0.68  la=0.06  vpcards=0.18  first_city_turn=33
+           SETTLE=5.6  CITY=2.8  ROAD=10.3  CARD=1.1  CARD=0.6  TRADE=6.6  MONOPO=0.1  PLENTY=0.1  BUILDI=0.0  TURN=34.6
+B lost n=197  vp=5.44  sett=2.59  city=1.21  lr=0.14  la=0.00  vpcards=0.15  first_city_turn=37
+           SETTLE=3.8  CITY=1.2  ROAD=7.7  CARD=0.7  CARD=0.3  TRADE=4.2  MONOPO=0.0  PLENTY=0.0  BUILDI=0.0  TURN=34.6
