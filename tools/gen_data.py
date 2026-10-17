@@ -68,11 +68,15 @@ def play(args):
                 rows.append((features(game, c) + [is_f[c], is_f[o]], c, game.state.num_turns))
     w = game.winning_color()
     if w is None:
-        return [], [], []
+        return [], [], [], []
+    from catanatron.state_functions import player_key
+    ps = game.state.player_state
+    vp = {c: ps[f"{player_key(game.state, c)}_ACTUAL_VICTORY_POINTS"] for c in game.state.colors}
     X = [r[0] for r in rows]
     y = [int(r[1] == w) for r in rows]
     t = [r[2] for r in rows]
-    return X, y, t
+    m = [vp[r[1]] - max(v for c, v in vp.items() if c != r[1]) for r in rows]   # final VP margin
+    return X, y, t, m
 
 
 def main():
@@ -87,17 +91,19 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     t0 = time.time()
-    X, y, t, g = [], [], [], []
+    X, y, t, g, M = [], [], [], [], []
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         jobs = [(a.seed0 + i, a.p, a.eps, (a.a, a.b)) for i in range(a.games)]
-        for i, (xi, yi, ti) in enumerate(ex.map(play, jobs, chunksize=4)):
+        for i, (xi, yi, ti, mi) in enumerate(ex.map(play, jobs, chunksize=4)):
             X += xi
             y += yi
             t += ti
+            M += mi
             g += [i] * len(yi)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     np.savez_compressed(a.out, X=np.array(X, dtype=np.float32), y=np.array(y, dtype=np.int8),
-                        t=np.array(t, dtype=np.int16), g=np.array(g, dtype=np.int32))
+                        t=np.array(t, dtype=np.int16), g=np.array(g, dtype=np.int32),
+                        m=np.array(M, dtype=np.int8))
     print(f"{len(y)} rows from {a.games} games in {time.time() - t0:.0f}s -> {a.out}")
 
 

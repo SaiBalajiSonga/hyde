@@ -1,0 +1,5 @@
+C:\Users\SAI BALAJI\.catan-venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (60) reached and the optimization hasn't converged yet.
+  warnings.warn(
+rows 259562  train 208616  val 50946  features 53
+margin regression: val corr 0.725  sign acc vs winner 0.7821
+wrote model_sp_margin53.json

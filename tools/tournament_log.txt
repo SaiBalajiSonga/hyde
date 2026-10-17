@@ -1,0 +1,63 @@
+36 matches, 360 jobs of 50 games, 16 workers
+  20/360 jobs  66s
+  40/360 jobs  121s
+  60/360 jobs  166s
+  80/360 jobs  219s
+  100/360 jobs  294s
+  120/360 jobs  345s
+  140/360 jobs  393s
+  160/360 jobs  457s
+  180/360 jobs  519s
+  200/360 jobs  583s
+  220/360 jobs  642s
+  240/360 jobs  687s
+  260/360 jobs  757s
+  280/360 jobs  806s
+  300/360 jobs  863s
+  320/360 jobs  930s
+  340/360 jobs  1007s
+  360/360 jobs  1064s
+
+A    B                win     ci    cpu  worst over err
+v2   F              0.688  0.041    417    859    0   0
+v2   F_build        0.700  0.040    419    938    0   0
+v2   F_city         0.698  0.040    436   1031    0   0
+v2   F_contender    0.706  0.040    425    938    0   0
+v2   F_dev          0.698  0.040    451   1047    0   0
+v2   F_look         0.714  0.040    459   1109    0   0
+v2   F_road         0.892  0.027    461   1141    0   0
+v2   learned_only   0.696  0.040    468   1156    0   0
+v2   mlp_mixed      0.502  0.044    431   1016    0   0
+v2   random         1.000  0.000    443   1031    0   0
+v2   v1             0.538  0.044    429   1094    0   0
+v2   v3             0.482  0.044    422   1266    0   0
+v2   v4             0.496  0.044    422    969    0   0
+v3   F              0.716  0.040    497   1250    0   0
+v3   F_build        0.712  0.040    500   1188    0   0
+v3   F_city         0.702  0.040    486   1078    0   0
+v3   F_contender    0.714  0.040    470   1422    0   0
+v3   F_dev          0.706  0.040    539   1344    0   0
+v3   F_look         0.712  0.040    497   1359    0   0
+v3   F_road         0.902  0.026    558   1547    1   0
+v3   learned_only   0.722  0.039    558   1516    1   0
+v3   mlp_mixed      0.560  0.043    508   1484    0   0
+v3   random         1.000  0.000    530   1484    0   0
+v3   v1             0.538  0.044    514   1516    1   0
+v3   v4             0.500  0.044    438   1141    0   0
+v4   F              0.660  0.042    469   1188    0   0
+v4   F_build        0.686  0.041    478   1328    0   0
+v4   F_city         0.708  0.040    475   1250    0   0
+v4   F_contender    0.690  0.041    466   1234    0   0
+v4   F_dev          0.732  0.039    516   1375    0   0
+v4   F_look         0.704  0.040    474   1234    0   0
+v4   F_road         0.900  0.026    526   1406    0   0
+v4   learned_only   0.696  0.040    534   1562    1   0
+v4   mlp_mixed      0.534  0.044    489   1375    0   0
+v4   random         1.000  0.000    497   1312    0   0
+v4   v1             0.544  0.044    459   1297    0   0
+
+worst-half mean over the F-like field (F, F variants, F_look, v1, learned_only, mlp_mixed):
+  v2: worst-half 0.624  overall 0.683  min 0.502
+  v3: worst-half 0.644  overall 0.698  min 0.538
+  v4: worst-half 0.623  overall 0.685  min 0.534
+wall 1064s

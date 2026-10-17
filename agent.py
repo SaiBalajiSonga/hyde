@@ -42,7 +42,10 @@ CFG = dict(
     reserve=0.200,      # clock kept back for the rest of the game; below it, one-ply only
     panic=0.040,        # below this, one-ply with the cheap hand-written value only
     last_resort=0.015,
-    cheap_in_reserve=False,  # in the reserve, one-ply with F's cheap value instead of the hybrid  # below this, a fixed priority by move type: no copies, no evaluation
+    cheap_in_reserve=False,
+    win_search=False,   # at >=7 actual VP: exhaustive search of our own moves this turn for a win
+    win_depth=4,
+    win_nodes=800,  # in the reserve, one-ply with F's cheap value instead of the hybrid  # below this, a fixed priority by move type: no copies, no evaluation
     chance_n=1,         # samples for moves with a random outcome (4 measured no better)
     open_roads=False,   # also simulate the placement phase for initial road choices
     open_opp="self",    # placement simulation: opponent picks by "self" (our eval) or "F" (F's eval)
@@ -97,7 +100,7 @@ class Agent:
         self.losses = [0] * len(self.cores)
         self.arm = 0
         self.last_turn = None
-        self.won = False
+        self.won = 0.0
         self.warm_up()
 
     def warm_up(self):
@@ -117,11 +120,9 @@ class Agent:
             pass
 
     def _new_game(self):
-        if self.last_turn is not None:          # close the previous game
-            if self.won:
-                self.wins[self.arm] += 1
-            else:
-                self.losses[self.arm] += 1
+        if self.last_turn is not None:          # close the previous game (fractional label)
+            self.wins[self.arm] += self.won
+            self.losses[self.arm] += 1.0 - self.won
         if len(self.cores) > 1:
             draws = [self.rng.betavariate(self.wins[k] + 1, self.losses[k] + 1)
                      for k in range(len(self.cores))]
@@ -130,10 +131,11 @@ class Agent:
             if log:
                 try:
                     with open(log, "a") as f:
-                        f.write(f"{os.getpid()} {self.wins} {self.losses} next={self.arm}" + chr(10))
+                        f.write(f"{os.getpid()} {[round(x, 2) for x in self.wins]} "
+                                f"{[round(x, 2) for x in self.losses]} next={self.arm}" + chr(10))
                 except Exception:
                     pass
-        self.won = False
+        self.won = 0.0
 
     def decide(self, obs, playable_actions) -> int:
         try:
@@ -143,15 +145,26 @@ class Agent:
         except Exception:
             pass
         i = self.cores[self.arm].decide(obs, playable_actions)
-        if len(self.cores) > 1 and not self.won:
+        if len(self.cores) > 1 and self.won < 1.0:
             try:
-                if obs.my_actual_vps >= 7:
-                    g = obs.sample_world(self.rng)
-                    g.execute(playable_actions[i], validate_action=False)
-                    self.won = g.winning_color() == obs.me
+                self.won = max(self.won, self._win_label(obs, playable_actions[i]))
             except Exception:
                 pass
         return i
+
+    def _win_label(self, obs, action):
+        """1 if this move wins outright. A dev-card buy at 9 VP wins with the chance of drawing a
+        VP card, which a sampled world cannot tell us: label it with that probability."""
+        if obs.my_actual_vps < 7:
+            return 0.0
+        g = obs.sample_world(self.rng)
+        g.execute(action, validate_action=False)
+        if action.action_type == ActionType.BUY_DEVELOPMENT_CARD and obs.my_actual_vps >= 9:
+            seen = (sum(obs.my_devs.values()) + sum(obs.played_devs["me"].values())
+                    + sum(obs.played_devs["opp"].values()))
+            vp_left = 5 - obs.my_devs.get("VICTORY_POINT", 0)
+            return max(0.0, min(1.0, vp_left / max(1, 25 - seen)))
+        return 1.0 if g.winning_color() == obs.me else 0.0
 
 
 class Core:
@@ -223,6 +236,11 @@ class Core:
         deadline = t0 + budget
         me = obs.me
         kind = actions[0].action_type
+        if (self.cfg["win_search"] and not placing and obs.my_actual_vps >= 7
+                and world.state.current_color() == me):
+            i = self._find_win(world, actions, me, deadline)
+            if i is not None:
+                return i
         if self.cfg["discard_smart"] and kind == ActionType.DISCARD_RESOURCE:
             return self._discard(obs, actions)
         if self.cfg["robber_exact"] and kind == ActionType.MOVE_ROBBER:
@@ -308,6 +326,46 @@ class Core:
             if best_v is None or v > best_v:
                 best_i, best_v = i, v
         return best_i
+
+    def _find_win(self, world, actions, me, deadline):
+        """Depth-first search over our own deterministic moves this turn (no dice, no dev-card
+        draws) for a sequence that reaches 10 VP. Returns the first move of such a line."""
+        skip = (self.end_turn, ActionType.BUY_DEVELOPMENT_CARD, ActionType.ROLL)
+        budget = [self.cfg["win_nodes"]]
+
+        def wins(g, depth):
+            if g.winning_color() == me:
+                return True
+            if depth == 0 or g.state.current_color() != me:
+                return False
+            for a in g.playable_actions:
+                if a.action_type in skip:
+                    continue
+                budget[0] -= 1
+                if budget[0] < 0 or time.perf_counter() > deadline:
+                    return False
+                c = g.copy()
+                try:
+                    c.execute(a, validate_action=False)
+                except Exception:
+                    continue
+                if wins(c, depth - 1):
+                    return True
+            return False
+
+        for i, a in enumerate(actions):
+            if a.action_type in skip:
+                continue
+            c = world.copy()
+            try:
+                c.execute(a, validate_action=False)
+            except Exception:
+                continue
+            if wins(c, self.cfg["win_depth"] - 1):
+                return i
+            if budget[0] < 0 or time.perf_counter() > deadline:
+                break
+        return None
 
     def _robber(self, world, actions, me):
         """Each robber move scored by its exact expected value: every card the victim could lose,

@@ -1,0 +1,7 @@
+rows 259562  train 208616  val 50946  features 53
+val log-loss 0.4490  acc 0.7715
+  turns   0-20   n= 13140  acc 0.652
+  turns  20-40   n= 13498  acc 0.766
+  turns  40-60   n= 13206  acc 0.842
+  turns  60-1000 n= 11102  acc 0.836
+wrote model_sp_win53.json
